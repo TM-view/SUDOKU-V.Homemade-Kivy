@@ -18,7 +18,7 @@ class LineBlock(Widget):
                 else : w = 1
                 self.lines.append(Line(points=[], width = w))
                 
-            for k in range(10):  # 10 เส้นแนวนอน
+            for k in range(11):  # 10 เส้นแนวนอน
                 if k % 3 == 0 : w = 3 
                 else : w = 1
                 self.lines.append(Line(points=[], width = w))
@@ -30,11 +30,11 @@ class LineBlock(Widget):
         # คำนวณตำแหน่งเส้นแนวตั้ง (x คงที่)
         for i in range(10):
             x = self.x + (width / 9) * i
-            self.lines[i].points = [x, self.y, x, self.y + height]
+            self.lines[i].points = [x, self.y, x, self.y + height - (height / 9.6)]
 
         # คำนวณตำแหน่งเส้นแนวนอน (y คงที่)
-        for i in range(10):
-            y = self.y + (height / 9) * i
+        for i in range(11):
+            y = self.y + (height / 10) * i
             self.lines[i + 10].points = [self.x, y, self.x + width, y]
             
 class BackGround(BoxLayout):
