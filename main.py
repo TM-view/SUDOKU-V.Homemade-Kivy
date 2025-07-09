@@ -3,7 +3,19 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle, Line
 from kivy.uix.widget import Widget
+from kivy.uix.button import Button
+from kivy.uix.floatlayout import FloatLayout
 
+class Selcet_Num(Button):
+    def __init__(self, number, **kwargs):
+        super().__init__(**kwargs)
+        self.background_color = (1,1,1,0)
+        self.number = number
+        self.bind(on_press = self.on_button_press)
+        
+    def on_button_press(self, instance) :
+        print(f'เลือกเลข = {self.number}')
+        
 class LineBlock(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -37,7 +49,7 @@ class LineBlock(Widget):
             y = self.y + (height / 10) * i
             self.lines[i + 10].points = [self.x, y, self.x + width, y]
             
-class BackGround(BoxLayout):
+class BackGround(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         with self.canvas.before:
@@ -45,6 +57,8 @@ class BackGround(BoxLayout):
             self.rect = Rectangle(pos = self.pos, size = self.size)
         self.bind(pos = self.update_rect, size = self.update_rect)
         self.add_widget(LineBlock())
+        for num in range(1,10) :
+            self.add_widget(Selcet_Num(num, size_hint = (1/5, 1), pos_hint = {'x': (num-1) / 9, 'y': 0.9}))
     
     def update_rect(self, *args):
         self.rect.pos = self.pos
