@@ -5,6 +5,7 @@ from kivy.graphics import Color, Rectangle, Line
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
+from kivy.core.window import Window
 
 class Selcet_Num(Button):
     def __init__(self, number, **kwargs):
@@ -14,7 +15,7 @@ class Selcet_Num(Button):
         self.bind(on_press = self.on_button_press)
         
     def on_button_press(self, instance) :
-        print(f'เลือกเลข = {self.number}')
+        print(f'เลือกเลข = {Window.size}')
         
 class LineBlock(Widget):
     def __init__(self, **kwargs):
@@ -59,6 +60,7 @@ class BackGround(FloatLayout):
         self.add_widget(LineBlock())
         for num in range(1,10) :
             self.add_widget(Selcet_Num(num, size_hint = (1/5, 1), pos_hint = {'x': (num-1) / 9, 'y': 0.9}))
+            self.add_widget(Label(text=str(num), pos_hint={'x':(num-1) / 9, 'y': 0.9}, size_hint=(0.1, 0.1), font_size='30sp'))   
     
     def update_rect(self, *args):
         self.rect.pos = self.pos
