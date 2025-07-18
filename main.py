@@ -8,14 +8,27 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 
 class Selcet_Num(Button):
-    def __init__(self, number, **kwargs):
+    instances = []
+    lastes = 0
+    
+    def __init__(self, number, label=None, **kwargs):
         super().__init__(**kwargs)
         self.background_color = (1,1,1,0)
+        self.color = (0,0,0,1)
         self.number = number
+        self.label = label
+        Selcet_Num.instances.append(self)
         self.bind(on_press = self.on_button_press)
         
     def on_button_press(self, instance) :
-        print(f'เลือกเลข = {Window.size}')
+        Selcet_Num.lastes = self.number
+        for obj in Selcet_Num.instances:
+            if obj.number == self.number : 
+                obj.color = (0,0,1,1) 
+                obj.label.color = (0,0,1,1)
+            else :
+                obj.color = (0,0,0,1)
+                obj.label.color = (0,0,0,1)
         
 class LineBlock(Widget):
     def __init__(self, **kwargs):
@@ -58,9 +71,14 @@ class BackGround(FloatLayout):
             self.rect = Rectangle(pos = self.pos, size = self.size)
         self.bind(pos = self.update_rect, size = self.update_rect)
         self.add_widget(LineBlock())
+        # Window.size = (720,1280) # แนวตั้ง
+        # Window.size = (1280,720) # แนวนอน
         for num in range(1,10) :
-            self.add_widget(Selcet_Num(num, size_hint = (1/5, 1), pos_hint = {'x': (num-1) / 9, 'y': 0.9}))
-            self.add_widget(Label(text=str(num), pos_hint={'x':(num-1) / 9, 'y': 0.9}, size_hint=(0.1, 0.1), font_size='30sp'))   
+            label = Label(text=str(num), pos_hint={'x':(num-1) / 9, 'y': 0.9}, size_hint=(1/9, 0.1), 
+                  font_size='30sp', color=(0,0,0,1), font_name='Roboto-Bold.ttf')
+            sn = Selcet_Num(num, label, size_hint = (1/5, 1), pos_hint = {'x': (num-1) / 9, 'y': 0.9})
+            self.add_widget(sn)
+            self.add_widget(label)   
     
     def update_rect(self, *args):
         self.rect.pos = self.pos
