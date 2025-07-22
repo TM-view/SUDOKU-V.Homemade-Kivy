@@ -139,7 +139,7 @@ class LineBlock(Widget):
         for row in range(9):
             for col in range(9):
                 rd = random.randint(0,1)
-                if rd < 1 and not miss_table(row,col):
+                if rd == 1 and not miss_table(row,col):
                     pass
                 else :
                     self.player_values[(row, col)] = self.grid_values[row][col]
@@ -148,6 +148,7 @@ class LineBlock(Widget):
                     
         # ✅ แสดงเลข
         self.relayout_numbers()
+        self.update_select_buttons()
 
     def relayout_numbers(self, *args):
         # ล้างของเก่า
@@ -313,7 +314,7 @@ class LineBlock(Widget):
             btn = Selcet_Num.button_refs.get(i)
             lbl = btn.label if btn else None
             if count[i] >= 9:
-                if Selcet_Num.lastes == i:
+                if Selcet_Num.lastes == i :
                     Selcet_Num.lastes = 0
                 btn.disabled = True
                 btn.text = ""  # ✅ ซ่อนปุ่ม
