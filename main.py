@@ -188,32 +188,30 @@ class LineBlock(Widget):
             if not (0 <= row <= 8 and 0 <= col <= 8):
                 return True
 
-            print(f"คุณกดที่ช่อง: row={row}, col={col}")
-
             from __main__ import Selcet_Num
 
             if Selcet_Num.lastes == 0:
                 print("ยังไม่ได้เลือกเลข")
                 return True
 
-            # ตรวจว่าเลขตรงกับคำตอบแล้วหรือยัง
             current_val = self.player_values.get((row, col), 0)
             correct_val = self.answer_values.get((row, col), 0)
 
             if current_val == correct_val:
                 print("ช่องนี้ตอบถูกแล้ว แก้ไม่ได้")
-                return True  # ❌ ห้ามแก้
+                return True
 
-            # ✅ อัปเดตเลขของผู้เล่น และแสดงบนหน้าจอ
             self.player_values[(row, col)] = Selcet_Num.lastes
+            is_correct = self.player_values[(row, col)] == correct_val
 
             if (row, col) in self.cell_labels:
-                self.cell_labels[(row, col)].text = str(Selcet_Num.lastes)
+                label = self.cell_labels[(row, col)]
+                label.text = str(Selcet_Num.lastes)
+                label.color = (0, 0, 0, 1) if is_correct else (1, 0, 0, 1)
             else:
                 pos_x = self.x + col * cell_width
                 pos_y = self.y + (8 - row) * cell_height
-
-                num_label = Label(
+                label = Label(
                     text=str(Selcet_Num.lastes),
                     font_size='30sp',
                     size_hint=(None, None),
@@ -221,15 +219,16 @@ class LineBlock(Widget):
                     pos=(pos_x, pos_y),
                     halign='center',
                     valign='middle',
-                    color=(0, 0, 0, 1)
+                    color=(0, 0, 0, 1) if is_correct else (1, 0, 0, 1)
                 )
-                num_label.bind(size=num_label.setter('text_size'))
-                self.add_widget(num_label)
-                self.cell_labels[(row, col)] = num_label
+                label.bind(size=label.setter('text_size'))
+                self.add_widget(label)
+                self.cell_labels[(row, col)] = label
 
             return True
 
         return super().on_touch_down(touch)
+
 
     def update_grid(self, *args):
         width = self.width
