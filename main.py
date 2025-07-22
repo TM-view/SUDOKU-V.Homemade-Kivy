@@ -44,6 +44,8 @@ class LineBlock(Widget):
         self.max_random = 5
         self.miss = [0 for _ in range(9)]
         self.lines = []
+        self.wrong_count = 0
+        self.warning_label = None
         self.cell_labels = {}
         self.answer_values = {}  # ✅ เก็บค่าที่สุ่มไว้
         self.player_values = {}
@@ -192,35 +194,29 @@ class LineBlock(Widget):
 
             from __main__ import Selcet_Num
 
-            current_val = self.player_values.get((row, col), 0)
-            correct_val = self.answer_values.get((row, col), 0)
-
-            # ✅ ถ้ากดที่เลขที่ตอบถูก → toggle highlight
-            if current_val != 0 and current_val == correct_val:
-                self.toggle_highlight_number(current_val)
-                return True
-
-            # ✅ ยังไม่ได้เลือกเลข → ห้ามกรอก
             if Selcet_Num.lastes == 0:
                 print("ยังไม่ได้เลือกเลข")
                 return True
 
-            # ✅ ถ้าตอบถูกแล้ว → แก้ไม่ได้
-            if current_val == correct_val:
-                print("ช่องนี้ตอบถูกแล้ว แก้ไม่ได้")
+            # ตรวจสอบว่าตำแหน่งนี้ล็อคไว้หรือไม่
+            correct_value = self.answer_values.get((row, col))
+            current_value = self.player_values.get((row, col))
+
+            # ถ้าเลขถูกต้องแล้ว ไม่อนุญาตให้เปลี่ยน
+            if current_value == correct_value:
                 return True
 
-            # ✅ กรอกเลข
+            # อัปเดตเลขใน player_values
             self.player_values[(row, col)] = Selcet_Num.lastes
-            is_correct = self.player_values[(row, col)] == correct_val
 
+            # แก้ไขหรือเพิ่ม label
             if (row, col) in self.cell_labels:
                 label = self.cell_labels[(row, col)]
                 label.text = str(Selcet_Num.lastes)
-                label.color = (0, 0, 0, 1) if is_correct else (1, 0, 0, 1)
             else:
                 pos_x = self.x + col * cell_width
                 pos_y = self.y + (8 - row) * cell_height
+
                 label = Label(
                     text=str(Selcet_Num.lastes),
                     font_size='30sp',
@@ -229,16 +225,49 @@ class LineBlock(Widget):
                     pos=(pos_x, pos_y),
                     halign='center',
                     valign='middle',
-                    color=(0, 0, 0, 1) if is_correct else (1, 0, 0, 1)
+                    color=(0, 0, 0, 1)
                 )
                 label.bind(size=label.setter('text_size'))
                 self.add_widget(label)
                 self.cell_labels[(row, col)] = label
-                
+
+            # เปลี่ยนสีเลขตามความถูกต้อง
+            if self.player_values[(row, col)] == self.answer_values[(row, col)]:
+                label.color = (0, 0, 0, 1)  # ถูก = สีดำ
+            else:
+                label.color = (1, 0, 0, 1)  # ผิด = สีแดง
+                self.wrong_count += 1
+                self.show_warning(f"You Wrong ({self.wrong_count}/3)")
+
             self.update_select_buttons()
             return True
 
         return super().on_touch_down(touch)
+    
+    def show_warning(self, message):
+        if self.warning_label:  # ถ้ามีป้ายเตือนเก่า ลบก่อน
+            self.remove_widget(self.warning_label)
+
+        self.warning_label = Label(
+            text=message,
+            font_size='36sp',
+            color=(1, 0, 0, 1),
+            size_hint=(None, None),
+            size=(300, 50),
+            pos=(self.center_x - 150, self.center_y),
+            halign='center',
+            valign='middle'
+        )
+        self.warning_label.bind(size=self.warning_label.setter('text_size'))
+        self.add_widget(self.warning_label)
+
+        def remove_warning(dt):
+            if self.warning_label:
+                self.remove_widget(self.warning_label)
+                self.warning_label = None
+
+        Clock.schedule_once(remove_warning, 2)  # หายภายใน 2 วินาที
+
 
     def update_grid(self, *args):
         width = self.width
