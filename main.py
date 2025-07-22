@@ -6,8 +6,8 @@ from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
-import random
 from kivy.clock import Clock
+import random
 
 class Selcet_Num(Button):
     instances = []
@@ -37,9 +37,13 @@ class LineBlock(Widget):
         super().__init__(**kwargs)
         self.bind(size=self.update_grid, pos=self.update_grid)
         self.bind(size=self.relayout_numbers, pos=self.relayout_numbers)  # ✅ เพิ่ม bind ตรงนี้
+        self.min_random = 2
+        self.max_random = 5
+        self.miss = [0 for _ in range(9)]
         self.lines = []
         self.cell_labels = {}
-        self.initial_values = {}  # ✅ เก็บค่าที่สุ่มไว้
+        self.answer_values = {}  # ✅ เก็บค่าที่สุ่มไว้
+        self.player_values = {}
 
         with self.canvas:
             Color(1, 1, 1, 1)
@@ -53,7 +57,7 @@ class LineBlock(Widget):
     def fill_random_numbers(self):
         self.cell_labels.clear()
         self.clear_widgets()
-        self.initial_values.clear()
+        self.answer_values.clear()
 
         # ✅ ใช้ตาราง list 2 มิติเพื่อเก็บตัวเลข
         self.grid_values = [[0 for _ in range(9)] for _ in range(9)]
@@ -96,16 +100,53 @@ class LineBlock(Widget):
         # ✅ เริ่มสร้าง Sudoku
         solve_cell(0, 0)
 
-        # ✅ ย้ายค่าไปไว้ใน initial_values
+        def miss_table(row, col):
+            value = 0
+            if row <= 2:
+                if col <= 2:
+                    value = 0
+                elif col > 2 and col <= 5:
+                    value = 1
+                else :
+                    value = 2
+            elif row > 2 and row <= 5:
+                if col <= 2:
+                    value = 3
+                elif col > 2 and col <= 5:
+                    value = 4
+                else :
+                    value = 5
+            else :
+                if col <= 2:
+                    value = 6
+                elif col > 2 and col <= 5:
+                    value = 7
+                else :
+                    value = 8
+                    
+            self.miss[value] += 1
+            if self.miss[value] < self.min_random or self.miss[value] > self.max_random :
+                return False
+            else :
+                return True
+            
+        # ✅ ย้ายค่าไปไว้ใน answer_values
         for row in range(9):
             for col in range(9):
-                self.initial_values[(row, col)] = self.grid_values[row][col]
-
+                rd = random.randint(0,1)
+                if rd < 1 and not miss_table(row,col):
+                    pass
+                else :
+                    self.player_values[(row, col)] = self.grid_values[row][col]
+                    
+                self.answer_values[(row, col)] = self.grid_values[row][col]
+                    
         # ✅ แสดงเลข
+        print(self.player_values)
         self.relayout_numbers()
 
     def relayout_numbers(self, *args):
-        # เคลียร์เลขเก่าออกก่อน
+        # ล้างของเก่า
         for label in self.cell_labels.values():
             self.remove_widget(label)
         self.cell_labels.clear()
@@ -113,29 +154,30 @@ class LineBlock(Widget):
         cell_width = self.width / 9
         cell_height = self.height / 9
 
-        for (row, col), number in self.initial_values.items():
+        for (row, col), value in self.player_values.items():
             center_x = self.x + col * cell_width + cell_width / 2
             center_y = self.y + (8 - row) * cell_height + cell_height / 2
 
+            color = (0, 0, 0, 1) if value == self.answer_values[(row, col)] else (1, 0, 0, 1)
+
             num_label = Label(
-                text=str(number),
+                text=str(value),
                 font_size='30sp',
                 size_hint=(None, None),
                 size=(cell_width, cell_height),
                 halign='center',
                 valign='middle',
-                color=(0, 0, 0, 1)
+                color=color
             )
             num_label.bind(size=num_label.setter('text_size'))
             num_label.center = (center_x, center_y)
 
             self.add_widget(num_label)
             self.cell_labels[(row, col)] = num_label
-            
+
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             x, y = touch.pos
-
             cell_width = self.width / 9
             cell_height = self.height / 9
 
@@ -145,7 +187,7 @@ class LineBlock(Widget):
             if not (0 <= row <= 8 and 0 <= col <= 8):
                 return True
 
-            print(f"คุณกดที่ช่อง: row={row}, col={col}")  # ✅ พิมพ์ตำแหน่ง
+            print(f"คุณกดที่ช่อง: row={row}, col={col}")
 
             from __main__ import Selcet_Num
 
@@ -153,25 +195,18 @@ class LineBlock(Widget):
                 print("ยังไม่ได้เลือกเลข")
                 return True
 
-            if (row, col) in self.cell_labels:
-                self.cell_labels[(row, col)].text = str(Selcet_Num.lastes)
-            else:
-                pos_x = self.x + col * cell_width
-                pos_y = self.y + (8 - row) * cell_height
+            correct_value = self.answer_values[(row, col)]
 
-                num_label = Label(
-                    text=str(Selcet_Num.lastes),
-                    font_size='30sp',
-                    size_hint=(None, None),
-                    size=(cell_width, cell_height),
-                    pos=(pos_x, pos_y),
-                    halign='center',
-                    valign='middle',
-                    color=(0, 0, 0, 1)
-                )
-                num_label.bind(size=num_label.setter('text_size'))
-                self.add_widget(num_label)
-                self.cell_labels[(row, col)] = num_label
+            # ✅ ไม่ให้ทับช่องที่เฉลยมาแล้ว
+            if (row, col) in self.player_values and self.player_values[(row, col)] != 0:
+                print("ช่องนี้ล็อคแล้ว")
+                return True
+
+            # ✅ อัปเดตค่าใน player_values
+            self.player_values[(row, col)] = Selcet_Num.lastes
+
+            # ✅ แสดงผลใหม่
+            self.relayout_numbers()
 
             return True
 
