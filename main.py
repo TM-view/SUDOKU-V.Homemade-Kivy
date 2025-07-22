@@ -12,6 +12,7 @@ import random
 class Selcet_Num(Button):
     instances = []
     lastes = 0
+    button_refs = {}
     
     def __init__(self, number, label=None, **kwargs):
         super().__init__(**kwargs)
@@ -20,6 +21,7 @@ class Selcet_Num(Button):
         self.number = number
         self.label = label
         Selcet_Num.instances.append(self)
+        Selcet_Num.button_refs[number] = self
         self.bind(on_press = self.on_button_press)
         
     def on_button_press(self, instance) :
@@ -143,7 +145,6 @@ class LineBlock(Widget):
                 self.answer_values[(row, col)] = self.grid_values[row][col]
                     
         # ✅ แสดงเลข
-        print(self.player_values)
         self.relayout_numbers()
 
     def relayout_numbers(self, *args):
@@ -233,7 +234,8 @@ class LineBlock(Widget):
                 label.bind(size=label.setter('text_size'))
                 self.add_widget(label)
                 self.cell_labels[(row, col)] = label
-
+                
+            self.update_select_buttons()
             return True
 
         return super().on_touch_down(touch)
@@ -269,7 +271,29 @@ class LineBlock(Widget):
                     label.color = (1, 0, 0, 1)
                 else:
                     label.color = (0, 0, 0, 1)
+                    
+    def update_select_buttons(self):
+        from __main__ import Selcet_Num
+        # นับจำนวนของแต่ละเลขใน player_values
+        count = {i: 0 for i in range(1, 10)}
+        for value in self.player_values.values():
+            if 1 <= value <= 9:
+                count[value] += 1
 
+        for i in range(1, 10):
+            btn = Selcet_Num.button_refs.get(i)
+            lbl = btn.label if btn else None
+            if count[i] >= 9:
+                if Selcet_Num.lastes == i:
+                    Selcet_Num.lastes = 0
+                btn.disabled = True
+                btn.text = ""  # ✅ ซ่อนปุ่ม
+                if lbl:
+                    lbl.text = ""
+            else:
+                btn.disabled = False
+                if lbl:
+                    lbl.text = str(i)
             
 class BackGround(FloatLayout):
     def __init__(self, **kwargs):
