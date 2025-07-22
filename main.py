@@ -6,6 +6,8 @@ from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
+import random
+from kivy.clock import Clock
 
 class Selcet_Num(Button):
     instances = []
@@ -34,55 +36,202 @@ class LineBlock(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bind(size=self.update_grid, pos=self.update_grid)
+        self.bind(size=self.relayout_numbers, pos=self.relayout_numbers)  # ✅ เพิ่ม bind ตรงนี้
         self.lines = []
+        self.cell_labels = {}
+        self.initial_values = {}  # ✅ เก็บค่าที่สุ่มไว้
 
         with self.canvas:
-            Color(1, 1, 1, 1)  # สีขาว
-            # สร้างเส้นไว้ก่อน (6 เส้น: 3 แนวตั้ง, 3 แนวนอน)
-            for j in range(10):  # 10 เส้นแนวตั้ง
-                if j % 3 == 0 : w = 3
-                else : w = 1
-                self.lines.append(Line(points=[], width = w))
-                
-            for k in range(11):  # 10 เส้นแนวนอน
-                if k % 3 == 0 : w = 3 
-                else : w = 1
-                self.lines.append(Line(points=[], width = w))
+            Color(1, 1, 1, 1)
+            for j in range(10):
+                w = 3 if j % 3 == 0 else 1
+                self.lines.append(Line(points=[], width=w))
+            for k in range(10):  # ✅ 9 แถวต้องมีแค่ 10 เส้นแนวนอน
+                w = 3 if k % 3 == 0 else 1
+                self.lines.append(Line(points=[], width=w))
+
+    def fill_random_numbers(self):
+        self.cell_labels.clear()
+        self.clear_widgets()
+        self.initial_values.clear()
+
+        # ✅ ใช้ตาราง list 2 มิติเพื่อเก็บตัวเลข
+        self.grid_values = [[0 for _ in range(9)] for _ in range(9)]
+
+        # ✅ สร้าง Sudoku โดยใช้ backtracking
+        def is_safe(row, col, num):
+            # ตรวจแถว
+            if num in self.grid_values[row]:
+                return False
+            # ตรวจคอลัมน์
+            for r in range(9):
+                if self.grid_values[r][col] == num:
+                    return False
+            # ตรวจในบล็อค 3x3
+            start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+            for r in range(start_row, start_row + 3):
+                for c in range(start_col, start_col + 3):
+                    if self.grid_values[r][c] == num:
+                        return False
+            return True
+
+        def solve_cell(row, col):
+            if row == 9:
+                return True  # จบแล้ว
+
+            next_row, next_col = (row + 1, 0) if col == 8 else (row, col + 1)
+
+            nums = list(range(1, 10))
+            random.shuffle(nums)  # ✅ สุ่มลำดับการลองเลข
+
+            for num in nums:
+                if is_safe(row, col, num):
+                    self.grid_values[row][col] = num
+                    if solve_cell(next_row, next_col):
+                        return True
+                    self.grid_values[row][col] = 0  # backtrack
+
+            return False
+
+        # ✅ เริ่มสร้าง Sudoku
+        solve_cell(0, 0)
+
+        # ✅ ย้ายค่าไปไว้ใน initial_values
+        for row in range(9):
+            for col in range(9):
+                self.initial_values[(row, col)] = self.grid_values[row][col]
+
+        # ✅ แสดงเลข
+        self.relayout_numbers()
+
+    def relayout_numbers(self, *args):
+        # เคลียร์เลขเก่าออกก่อน
+        for label in self.cell_labels.values():
+            self.remove_widget(label)
+        self.cell_labels.clear()
+
+        cell_width = self.width / 9
+        cell_height = self.height / 9
+
+        for (row, col), number in self.initial_values.items():
+            center_x = self.x + col * cell_width + cell_width / 2
+            center_y = self.y + (8 - row) * cell_height + cell_height / 2
+
+            num_label = Label(
+                text=str(number),
+                font_size='30sp',
+                size_hint=(None, None),
+                size=(cell_width, cell_height),
+                halign='center',
+                valign='middle',
+                color=(0, 0, 0, 1)
+            )
+            num_label.bind(size=num_label.setter('text_size'))
+            num_label.center = (center_x, center_y)
+
+            self.add_widget(num_label)
+            self.cell_labels[(row, col)] = num_label
+            
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            x, y = touch.pos
+
+            cell_width = self.width / 9
+            cell_height = self.height / 9
+
+            row = int((self.top - y) / cell_height)
+            col = int((x - self.x) / cell_width)
+
+            if not (0 <= row <= 8 and 0 <= col <= 8):
+                return True
+
+            print(f"คุณกดที่ช่อง: row={row}, col={col}")  # ✅ พิมพ์ตำแหน่ง
+
+            from __main__ import Selcet_Num
+
+            if Selcet_Num.lastes == 0:
+                print("ยังไม่ได้เลือกเลข")
+                return True
+
+            if (row, col) in self.cell_labels:
+                self.cell_labels[(row, col)].text = str(Selcet_Num.lastes)
+            else:
+                pos_x = self.x + col * cell_width
+                pos_y = self.y + (8 - row) * cell_height
+
+                num_label = Label(
+                    text=str(Selcet_Num.lastes),
+                    font_size='30sp',
+                    size_hint=(None, None),
+                    size=(cell_width, cell_height),
+                    pos=(pos_x, pos_y),
+                    halign='center',
+                    valign='middle',
+                    color=(0, 0, 0, 1)
+                )
+                num_label.bind(size=num_label.setter('text_size'))
+                self.add_widget(num_label)
+                self.cell_labels[(row, col)] = num_label
+
+            return True
+
+        return super().on_touch_down(touch)
 
     def update_grid(self, *args):
         width = self.width
         height = self.height
-
-        # คำนวณตำแหน่งเส้นแนวตั้ง (x คงที่)
         for i in range(10):
             x = self.x + (width / 9) * i
-            self.lines[i].points = [x, self.y, x, self.y + height - (height / 9.6)]
-
-        # คำนวณตำแหน่งเส้นแนวนอน (y คงที่)
-        for i in range(11):
-            y = self.y + (height / 10) * i
+            self.lines[i].points = [x, self.y, x, self.y + height]
+        for i in range(10):
+            y = self.y + (height / 9) * i
             self.lines[i + 10].points = [self.x, y, self.x + width, y]
+
             
 class BackGround(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         with self.canvas.before:
             Color(0.8, 0.7, 0.5, 0.5)
-            self.rect = Rectangle(pos = self.pos, size = self.size)
-        self.bind(pos = self.update_rect, size = self.update_rect)
-        self.add_widget(LineBlock())
-        # Window.size = (720,1280) # แนวตั้ง
-        # Window.size = (1280,720) # แนวนอน
-        for num in range(1,10) :
-            label = Label(text=str(num), pos_hint={'x':(num-1) / 9, 'y': 0.9}, size_hint=(1/9, 0.1), 
-                  font_size='30sp', color=(0,0,0,1), font_name='Roboto-Bold.ttf')
-            sn = Selcet_Num(num, label, size_hint = (1/5, 1), pos_hint = {'x': (num-1) / 9, 'y': 0.9})
-            self.add_widget(sn)
-            self.add_widget(label)   
-    
+            self.rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
+        # สร้าง layout หลัก: แนวตั้ง แบ่งพื้นที่
+        main_layout = BoxLayout(orientation='vertical')
+        self.add_widget(main_layout)
+
+        # พื้นที่ปุ่มเลือกตัวเลข (10% ด้านบน)
+        button_bar = FloatLayout(size_hint=(1, 0.1))
+        for num in range(1, 10):
+            label = Label(
+                text=str(num),
+                pos_hint={'x': (num - 1) / 9, 'y': 0},
+                size_hint=(1 / 9, 1),
+                font_size='30sp',
+                color=(0, 0, 0, 1),
+                font_name='Roboto-Bold.ttf'
+            )
+            sn = Selcet_Num(num, label,
+                            size_hint=(1 / 9, 1),
+                            pos_hint={'x': (num - 1) / 9, 'y': 0})
+            button_bar.add_widget(sn)
+            button_bar.add_widget(label)
+        main_layout.add_widget(button_bar)
+
+        # พื้นที่ตาราง (90% ด้านล่าง)
+        self.grid = LineBlock(size_hint=(1, 0.9))
+        main_layout.add_widget(self.grid)
+
+        # สุ่มเลขหลัง layout เสร็จ
+        Clock.schedule_once(self.populate_random_numbers_after_layout, 0)
+
     def update_rect(self, *args):
         self.rect.pos = self.pos
         self.rect.size = self.size
+
+    def populate_random_numbers_after_layout(self, dt):
+        self.grid.fill_random_numbers()
         
 class Main(App):
     def build(self):
