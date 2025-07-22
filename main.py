@@ -37,6 +37,7 @@ class LineBlock(Widget):
         super().__init__(**kwargs)
         self.bind(size=self.update_grid, pos=self.update_grid)
         self.bind(size=self.relayout_numbers, pos=self.relayout_numbers)  # ✅ เพิ่ม bind ตรงนี้
+        self.highlighted_number = None
         self.min_random = 2
         self.max_random = 5
         self.miss = [0 for _ in range(9)]
@@ -190,17 +191,25 @@ class LineBlock(Widget):
 
             from __main__ import Selcet_Num
 
+            current_val = self.player_values.get((row, col), 0)
+            correct_val = self.answer_values.get((row, col), 0)
+
+            # ✅ ถ้ากดที่เลขที่ตอบถูก → toggle highlight
+            if current_val != 0 and current_val == correct_val:
+                self.toggle_highlight_number(current_val)
+                return True
+
+            # ✅ ยังไม่ได้เลือกเลข → ห้ามกรอก
             if Selcet_Num.lastes == 0:
                 print("ยังไม่ได้เลือกเลข")
                 return True
 
-            current_val = self.player_values.get((row, col), 0)
-            correct_val = self.answer_values.get((row, col), 0)
-
+            # ✅ ถ้าตอบถูกแล้ว → แก้ไม่ได้
             if current_val == correct_val:
                 print("ช่องนี้ตอบถูกแล้ว แก้ไม่ได้")
                 return True
 
+            # ✅ กรอกเลข
             self.player_values[(row, col)] = Selcet_Num.lastes
             is_correct = self.player_values[(row, col)] == correct_val
 
@@ -229,7 +238,6 @@ class LineBlock(Widget):
 
         return super().on_touch_down(touch)
 
-
     def update_grid(self, *args):
         width = self.width
         height = self.height
@@ -239,6 +247,28 @@ class LineBlock(Widget):
         for i in range(10):
             y = self.y + (height / 9) * i
             self.lines[i + 10].points = [self.x, y, self.x + width, y]
+    
+    def toggle_highlight_number(self, number):
+        # สลับเลขที่กำลังไฮไลต์
+        if self.highlighted_number == number:
+            self.highlighted_number = None
+        else:
+            self.highlighted_number = number
+
+        # อัปเดตสีทั้งหมด
+        for (row, col), label in self.cell_labels.items():
+            val = self.player_values.get((row, col), 0)
+            correct = self.answer_values.get((row, col), 0)
+
+            # ถ้าตอบถูก → อนุญาตให้ไฮไลต์
+            if val == correct and val == number:
+                label.color = (0, 1, 0, 1) if self.highlighted_number == number else (0, 0, 0, 1)
+            else:
+                # ถ้าเป็นช่องที่กรอกผิด → แดง
+                if val != 0 and val != correct:
+                    label.color = (1, 0, 0, 1)
+                else:
+                    label.color = (0, 0, 0, 1)
 
             
 class BackGround(FloatLayout):
