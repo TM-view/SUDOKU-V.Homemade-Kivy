@@ -178,6 +178,7 @@ class LineBlock(Widget):
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
             x, y = touch.pos
+
             cell_width = self.width / 9
             cell_height = self.height / 9
 
@@ -195,18 +196,36 @@ class LineBlock(Widget):
                 print("ยังไม่ได้เลือกเลข")
                 return True
 
-            correct_value = self.answer_values[(row, col)]
+            # ตรวจว่าเลขตรงกับคำตอบแล้วหรือยัง
+            current_val = self.player_values.get((row, col), 0)
+            correct_val = self.answer_values.get((row, col), 0)
 
-            # ✅ ไม่ให้ทับช่องที่เฉลยมาแล้ว
-            if (row, col) in self.player_values and self.player_values[(row, col)] != 0:
-                print("ช่องนี้ล็อคแล้ว")
-                return True
+            if current_val == correct_val:
+                print("ช่องนี้ตอบถูกแล้ว แก้ไม่ได้")
+                return True  # ❌ ห้ามแก้
 
-            # ✅ อัปเดตค่าใน player_values
+            # ✅ อัปเดตเลขของผู้เล่น และแสดงบนหน้าจอ
             self.player_values[(row, col)] = Selcet_Num.lastes
 
-            # ✅ แสดงผลใหม่
-            self.relayout_numbers()
+            if (row, col) in self.cell_labels:
+                self.cell_labels[(row, col)].text = str(Selcet_Num.lastes)
+            else:
+                pos_x = self.x + col * cell_width
+                pos_y = self.y + (8 - row) * cell_height
+
+                num_label = Label(
+                    text=str(Selcet_Num.lastes),
+                    font_size='30sp',
+                    size_hint=(None, None),
+                    size=(cell_width, cell_height),
+                    pos=(pos_x, pos_y),
+                    halign='center',
+                    valign='middle',
+                    color=(0, 0, 0, 1)
+                )
+                num_label.bind(size=num_label.setter('text_size'))
+                self.add_widget(num_label)
+                self.cell_labels[(row, col)] = num_label
 
             return True
 
