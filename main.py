@@ -7,6 +7,7 @@ from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
+from kivy.uix.popup import Popup
 import random
 
 class Selcet_Num(Button):
@@ -138,8 +139,8 @@ class LineBlock(Widget):
         # ✅ ย้ายค่าไปไว้ใน answer_values
         for row in range(9):
             for col in range(9):
-                rd = random.randint(0,1)
-                if rd == 1 and not miss_table(row,col):
+                rd = random.randint(0,2)
+                if rd < 2 and not miss_table(row,col):
                     pass
                 else :
                     self.player_values[(row, col)] = self.grid_values[row][col]
@@ -239,6 +240,8 @@ class LineBlock(Widget):
                 label.color = (1, 0, 0, 1)  # ผิด = สีแดง
                 self.wrong_count += 1
                 self.show_warning(f"You Wrong ({self.wrong_count}/3)")
+                if self.wrong_count >= 3:
+                    self.game_over()
 
             self.update_select_buttons()
             return True
@@ -306,8 +309,8 @@ class LineBlock(Widget):
         from __main__ import Selcet_Num
         # นับจำนวนของแต่ละเลขใน player_values
         count = {i: 0 for i in range(1, 10)}
-        for value in self.player_values.values():
-            if 1 <= value <= 9:
+        for (row, col), value in self.player_values.items():
+            if value == self.answer_values.get((row, col), 0):
                 count[value] += 1
 
         for i in range(1, 10):
@@ -324,6 +327,44 @@ class LineBlock(Widget):
                 btn.disabled = False
                 if lbl:
                     lbl.text = str(i)
+                    
+    def game_over(self):
+        self.warning_label = None  # ล้างป้ายเตือนหากยังอยู่
+
+        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=20)
+        message = Label(text="Game Over!\nYou missed 3 times.", font_size='24sp', halign='center')
+
+        btn_retry = Button(text="Play Again", size_hint=(1, 0.3), font_size='20sp')
+        popup_layout.add_widget(message)
+        popup_layout.add_widget(btn_retry)
+
+        popup = Popup(title="Game Over", content=popup_layout,
+                    size_hint=(0.6, 0.4), auto_dismiss=False)
+        
+        def restart_game(instance):
+            popup.dismiss()
+            
+            # ✅ เคลียร์ค่าต่าง ๆ
+            self.wrong_count = 0
+            self.miss = [0 for _ in range(9)]
+            self.player_values.clear()
+            self.cell_labels.clear()
+            self.clear_widgets()
+
+            # ✅ ล้างเลขที่เลือก
+            from __main__ import Selcet_Num
+            Selcet_Num.lastes = 0
+            for btn in Selcet_Num.instances:
+                btn.color = (0, 0, 0, 1)
+                if btn.label:
+                    btn.label.color = (0, 0, 0, 1)
+                    btn.label.text = str(btn.number)
+                btn.disabled = False
+
+            self.fill_random_numbers()
+
+        btn_retry.bind(on_press=restart_game)
+        popup.open()
             
 class BackGround(FloatLayout):
     def __init__(self, **kwargs):
