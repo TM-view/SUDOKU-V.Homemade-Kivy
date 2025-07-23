@@ -4,6 +4,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle, Line
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
+from kivy.uix.modalview import ModalView
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
@@ -34,6 +35,54 @@ class Selcet_Num(Button):
             else :
                 obj.color = (0,0,0,1)
                 obj.label.color = (0,0,0,1)
+
+class DifficultyPopup(ModalView):
+    def __init__(self, callback, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (0.5, 0.5)
+        self.auto_dismiss = False
+        self.callback = callback  # ฟังก์ชันที่จะเรียกหลังเลือกเสร็จ
+
+        layout = BoxLayout(orientation='vertical', spacing=10, padding=20)
+
+        label = Label(text="Select Difficulty", font_size='24sp', color=(1,1,1,1), halign='center')
+        layout.add_widget(label)
+
+        btn_easy = Button(text="Easy", size_hint=(1, 0.3))
+        btn_medium = Button(text="Medium", size_hint=(1, 0.3))
+        btn_hard = Button(text="Hard", size_hint=(1, 0.3))
+        btn_quit = Button(text="Quit Game", size_hint=(1, 0.3))
+
+        layout.add_widget(btn_easy)
+        layout.add_widget(btn_medium)
+        layout.add_widget(btn_hard)
+        layout.add_widget(btn_quit)
+
+        # ปรับสีปุ่มและพื้นหลังให้เป็นสไตล์ Retro (ตัวหนังสือชัดเจน)
+        with layout.canvas.before:
+            from kivy.graphics import Color, Rectangle
+            Color(0, 0, 0, 0.9)  # พื้นดำโปร่งแสง
+            self.rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
+        self.add_widget(layout)
+
+        # ผูก event
+        btn_easy.bind(on_press=lambda x: self.select_difficulty(4, 7))
+        btn_medium.bind(on_press=lambda x: self.select_difficulty(5, 7))
+        btn_hard.bind(on_press=lambda x: self.select_difficulty(6, 7))
+        btn_quit.bind(on_press=self.quit_game)
+
+    def update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+    def select_difficulty(self, min_r, max_r):
+        self.dismiss()
+        self.callback(min_r, max_r)
+
+    def quit_game(self, *args):
+        App.get_running_app().stop()
         
 class LineBlock(Widget):
     def __init__(self, **kwargs):
@@ -41,8 +90,8 @@ class LineBlock(Widget):
         self.bind(size=self.update_grid, pos=self.update_grid)
         self.bind(size=self.relayout_numbers, pos=self.relayout_numbers)  # ✅ เพิ่ม bind ตรงนี้
         self.highlighted_number = None
-        self.min_random = 2
-        self.max_random = 5
+        self.min_random = 4
+        self.max_random = 7
         self.miss = [0 for _ in range(9)]
         self.lines = []
         self.wrong_count = 0
@@ -139,8 +188,8 @@ class LineBlock(Widget):
         # ✅ ย้ายค่าไปไว้ใน answer_values
         for row in range(9):
             for col in range(9):
-                rd = random.randint(0,2)
-                if rd < 2 and not miss_table(row,col):
+                rd = random.randint(0,8)
+                if rd < 8 and not miss_table(row,col):
                     pass
                 else :
                     self.player_values[(row, col)] = self.grid_values[row][col]
@@ -196,6 +245,16 @@ class LineBlock(Widget):
 
             from __main__ import Selcet_Num
 
+            # เช็คว่ากดบนช่องที่ถูกต้องแล้วหรือไม่ (มีเลข และเลขถูกต้อง)
+            if (row, col) in self.player_values:
+                val = self.player_values[(row, col)]
+                correct = self.answer_values.get((row, col))
+                if val == correct:
+                    # เรียก toggle highlight เลขที่ถูกกด
+                    self.toggle_highlight_number(val)
+                    return True
+
+            # ส่วนเดิมที่จัดการการเลือกเลข
             if Selcet_Num.lastes == 0:
                 print("ยังไม่ได้เลือกเลข")
                 return True
@@ -284,25 +343,25 @@ class LineBlock(Widget):
             self.lines[i + 10].points = [self.x, y, self.x + width, y]
     
     def toggle_highlight_number(self, number):
-        # สลับเลขที่กำลังไฮไลต์
+        # ถ้าเลขเดียวกันถูกกดซ้ำ จะยกเลิกไฮไลต์
         if self.highlighted_number == number:
             self.highlighted_number = None
         else:
             self.highlighted_number = number
 
-        # อัปเดตสีทั้งหมด
         for (row, col), label in self.cell_labels.items():
             val = self.player_values.get((row, col), 0)
             correct = self.answer_values.get((row, col), 0)
 
-            # ถ้าตอบถูก → อนุญาตให้ไฮไลต์
             if val == correct and val == number:
+                # ถ้าไฮไลต์อยู่ → สีเขียว
                 label.color = (0, 1, 0, 1) if self.highlighted_number == number else (0, 0, 0, 1)
             else:
-                # ถ้าเป็นช่องที่กรอกผิด → แดง
+                # ถ้าผิด → แดง
                 if val != 0 and val != correct:
                     label.color = (1, 0, 0, 1)
                 else:
+                    # ตัวเลขอื่นสีดำปกติ
                     label.color = (0, 0, 0, 1)
                     
     def update_select_buttons(self):
@@ -331,28 +390,55 @@ class LineBlock(Widget):
     def game_over(self):
         self.warning_label = None  # ล้างป้ายเตือนหากยังอยู่
 
-        popup_layout = BoxLayout(orientation='vertical', spacing=10, padding=20)
-        message = Label(text="Game Over!\nYou missed 3 times.", font_size='24sp', halign='center')
+        popup_layout = BoxLayout(
+            orientation='vertical',
+            spacing=10,
+            padding=0,
+            size_hint=(1, 1)
+        )
 
-        btn_retry = Button(text="Play Again", size_hint=(1, 0.3), font_size='20sp')
+        message = Label(
+            text="Game Over!\nYou missed 3 times.",
+            font_size='28sp',
+            halign='center',
+            valign='middle',
+            color=(0, 1, 0, 1),
+            font_name='RobotoMono-Regular.ttf'
+        )
+        message.bind(size=message.setter('text_size'))
+
+        btn_retry = Button(
+            text="Play Again",
+            size_hint=(1, 0.3),
+            font_size='20sp',
+            background_color=(0.2, 0.2, 0.2, 1),
+            color=(1, 1, 0, 1),
+            font_name='RobotoMono-Regular.ttf'
+        )
+
         popup_layout.add_widget(message)
         popup_layout.add_widget(btn_retry)
 
-        popup = Popup(title="Game Over", content=popup_layout,
-                    size_hint=(0.6, 0.4), auto_dismiss=False)
-        
-        def restart_game(instance):
+        popup = Popup(
+            title="",
+            content=popup_layout,
+            background_color=(0, 0, 0, 1),
+            separator_height=0,
+            size_hint=(0.4, 0.4),
+            auto_dismiss=False
+        )
+
+        def on_retry(instance):
             popup.dismiss()
-            
-            # ✅ เคลียร์ค่าต่าง ๆ
+            # แทนที่จะรีเซ็ตเอง จะให้ BackGround เรียกหน้าต่างเลือกระดับความยากอีกครั้ง
+            app = App.get_running_app()
+            root = app.root
+            # รีเซ็ตข้อมูลใน LineBlock ก่อน
             self.wrong_count = 0
             self.miss = [0 for _ in range(9)]
             self.player_values.clear()
             self.cell_labels.clear()
             self.clear_widgets()
-
-            # ✅ ล้างเลขที่เลือก
-            from __main__ import Selcet_Num
             Selcet_Num.lastes = 0
             for btn in Selcet_Num.instances:
                 btn.color = (0, 0, 0, 1)
@@ -360,10 +446,12 @@ class LineBlock(Widget):
                     btn.label.color = (0, 0, 0, 1)
                     btn.label.text = str(btn.number)
                 btn.disabled = False
+            
+            # แสดง Popup ความยากใหม่
+            root.difficulty_chosen = False
+            root.show_difficulty_popup(0)
 
-            self.fill_random_numbers()
-
-        btn_retry.bind(on_press=restart_game)
+        btn_retry.bind(on_press=on_retry)
         popup.open()
             
 class BackGround(FloatLayout):
@@ -371,7 +459,7 @@ class BackGround(FloatLayout):
         super().__init__(**kwargs)
 
         with self.canvas.before:
-            Color(0.8, 0.7, 0.5, 0.5)
+            Color(0.8, 0.7, 0.5, 0.8)
             self.rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self.update_rect, size=self.update_rect)
 
@@ -401,6 +489,11 @@ class BackGround(FloatLayout):
         self.grid = LineBlock(size_hint=(1, 0.9))
         main_layout.add_widget(self.grid)
 
+        self.difficulty_chosen = False
+        self.difficulty_min = 4
+        self.difficulty_max = 7
+        
+        Clock.schedule_once(self.show_difficulty_popup, 0)
         # สุ่มเลขหลัง layout เสร็จ
         Clock.schedule_once(self.populate_random_numbers_after_layout, 0)
 
@@ -408,8 +501,24 @@ class BackGround(FloatLayout):
         self.rect.pos = self.pos
         self.rect.size = self.size
 
+    def show_difficulty_popup(self, dt):
+        def on_difficulty_selected(min_r, max_r):
+            self.difficulty_min = min_r
+            self.difficulty_max = max_r
+            self.difficulty_chosen = True
+            # ตั้งค่าความยากให้ grid
+            self.grid.min_random = min_r
+            self.grid.max_random = max_r
+            # สุ่มเลขในตาราง
+            self.grid.fill_random_numbers()
+
+        popup = DifficultyPopup(on_difficulty_selected)
+        popup.open()
+    
     def populate_random_numbers_after_layout(self, dt):
-        self.grid.fill_random_numbers()
+        # ถ้ายังไม่เลือกความยาก จะไม่สุ่ม
+        if self.difficulty_chosen:
+            self.grid.fill_random_numbers()
         
 class Main(App):
     def build(self):
