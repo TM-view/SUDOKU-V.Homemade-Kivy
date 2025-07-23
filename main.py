@@ -43,25 +43,42 @@ class DifficultyPopup(ModalView):
         self.auto_dismiss = False
         self.callback = callback  # ฟังก์ชันที่จะเรียกหลังเลือกเสร็จ
 
-        layout = BoxLayout(orientation='vertical', spacing=10, padding=20)
+        layout = BoxLayout(orientation='vertical', spacing=15, padding=20)
 
-        label = Label(text="Select Difficulty", font_size='24sp', color=(1,1,1,1), halign='center')
+        label = Label(
+            text="SELECT DIFFICULTY",
+            font_size='32sp',
+            color=(0.8, 1, 0.2, 1),  # สีเขียวเหลืองแบบ Retro
+            halign='center',
+            font_name='RobotoMono-Regular.ttf'  # ฟอนต์แบบ monospaced
+        )
         layout.add_widget(label)
 
-        btn_easy = Button(text="Easy", size_hint=(1, 0.3))
-        btn_medium = Button(text="Medium", size_hint=(1, 0.3))
-        btn_hard = Button(text="Hard", size_hint=(1, 0.3))
-        btn_quit = Button(text="Quit Game", size_hint=(1, 0.3))
+        btn_style = {
+            'size_hint': (1, 0.25),
+            'font_size': '24sp',
+            'font_name': 'RobotoMono-Regular.ttf',
+            'background_normal': '',  # เอา texture ปุ่มออกเพื่อใช้ background_color
+            'background_down': '',
+            'background_color': (0, 0, 0, 1),  # ดำล้วน
+            'color': (1, 1, 0, 1),  # สีเหลืองเด่น
+            'bold': True,
+        }
+
+        btn_easy = Button(text="EASY", **btn_style)
+        btn_medium = Button(text="MEDIUM", **btn_style)
+        btn_hard = Button(text="HARD", **btn_style)
+        btn_quit = Button(text="QUIT GAME", **btn_style)
 
         layout.add_widget(btn_easy)
         layout.add_widget(btn_medium)
         layout.add_widget(btn_hard)
         layout.add_widget(btn_quit)
 
-        # ปรับสีปุ่มและพื้นหลังให้เป็นสไตล์ Retro (ตัวหนังสือชัดเจน)
+        # พื้นหลังสีดำทึบสำหรับ layout
         with layout.canvas.before:
             from kivy.graphics import Color, Rectangle
-            Color(0, 0, 0, 0.9)  # พื้นดำโปร่งแสง
+            Color(0, 0, 0, 0.95)  # แทบดำโปร่งแสงน้อยมาก
             self.rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self.update_rect, size=self.update_rect)
 
